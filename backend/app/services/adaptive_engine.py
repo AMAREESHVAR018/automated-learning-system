@@ -30,9 +30,14 @@ class AdaptiveEnv(gym.Env):
 
 
 env = AdaptiveEnv()
-
 model = PPO("MlpPolicy", env, verbose=0)
-model.learn(total_timesteps=1000)
+
+# ⚡ DO NOT train automatically
+# model.learn(total_timesteps=1000)
+
+
+def train_model():
+    model.learn(total_timesteps=1000)
 
 
 def get_adaptive_action(emotion_score, performance_score):
@@ -40,3 +45,7 @@ def get_adaptive_action(emotion_score, performance_score):
     action, _ = model.predict(obs)
     actions = ["Decrease Difficulty", "Maintain Level", "Increase Difficulty"]
     return actions[action]
+
+
+# Keep compatibility for routes
+adjust_difficulty = get_adaptive_action

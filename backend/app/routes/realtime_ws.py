@@ -1,41 +1,22 @@
-from fastapi import APIRouter, WebSocket
-import base64
-import cv2
-import numpy as np
-import asyncio
-from app.multimodal.facial_emotion.inference import predict_frame
-from app.services.emotion_service import fuse_multimodal
+from fastapi import WebSocket, APIRouter
+from app.services.adaptive_engine import get_adaptive_action
 
 router = APIRouter()
 
-@router.websocket("/ws/realtime")
-async def realtime_emotion(websocket: WebSocket):
-
+@router.websocket("/ws/emotion")
+async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
-    try:
-        while True:
-            data = await websocket.receive_text()
+    while True:
+        data = await websocket.receive_json()
 
-            img_bytes = base64.b64decode(data.split(",")[1])
-            np_arr = np.frombuffer(img_bytes, np.uint8)
-            frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        emotion_score = float(data.get("emotion", 0.5))
+        performance_score = float(data.get("performance", 0.5))
 
-            facial_emotion = predict_frame(frame)
+        action = get_adaptive_action(emotion_score, performance_score)
 
-            speech_emotion = "neutral"
-            typing_emotion = "neutral"
-
-            final_emotion = fuse_multimodal(
-                facial_emotion,
-                speech_emotion,
-                typing_emotion
-            )
-
-            await websocket.send_json({
-                "facial": facial_emotion,
-                "final": final_emotion
-            })
-
-    except Exception as e:
-        print("WebSocket error:", e)
+        await websocket.send_json({
+            "emotion_score": emotion_score,
+            "performance_score": performance_score,
+            "adaptive_action": action
+        })
